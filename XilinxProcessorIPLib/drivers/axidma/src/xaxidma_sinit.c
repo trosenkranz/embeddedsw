@@ -55,9 +55,10 @@
 
 /***************************** Include Files *********************************/
 
-#include "xparameters.h"
+//#include "xparameters.h"
 #include "xaxidma.h"
 
+#define XPAR_XAXIDMA_NUM_INSTANCES 1
 
 /*****************************************************************************/
 /**

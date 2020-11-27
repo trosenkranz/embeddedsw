@@ -1,14 +1,13 @@
-COMPILER=
+COMPILER=gcc
 ARCHIVER=
 CP=cp
-COMPILER_FLAGS=
+COMPILER_FLAGS=-O3
 EXTRA_COMPILER_FLAGS=
 LIB=libxil.a
 
 RELEASEDIR=../../../lib
 INCLUDEDIR=../../../include
-INCLUDES=-I${INCLUDEDIR}
-
+INCLUDES=-I./. -I${INCLUDEDIR} -I../../../../lib/bsp/standalone/src/common -I../../common/src -I../../../../lib/bsp/standalone/src/common -I../../../../lib/bsp/standalone/src/arm/cortexr5 -I../../../../lib/bsp/standalone/src/arm/common/gcc/ -I../../../../lib/bsp/standalone/src/common -I../../../../XilinxProcessorIPLib/drivers/common/src
 OUTS = *.o
 OBJECTS =	$(addsuffix .o, $(basename $(wildcard *.c)))
 

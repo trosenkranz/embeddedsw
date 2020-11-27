@@ -59,6 +59,7 @@
  *****************************************************************************/
 
 #include "xaxidma_bd.h"
+#include <stdio.h>
 
 /************************** Function Prototypes ******************************/
 
@@ -131,8 +132,8 @@ u32 XAxiDma_BdSetBufAddr(XAxiDma_Bd* BdPtr, UINTPTR Addr)
 
 	if (Addr & (WordLen - 1)) {
 		if ((HasDRE & XAXIDMA_BD_HAS_DRE_MASK) == 0) {
-			xil_printf("Error set buf addr %x with %x and %x,"
-			" %x\r\n",Addr, HasDRE, (WordLen - 1),
+			printf("Error set buf addr %lx with %x and %x,"
+			" %lx\r\n",Addr, HasDRE, (WordLen - 1),
 			Addr & (WordLen - 1));
 
 			return XST_INVALID_PARAM;
@@ -167,8 +168,8 @@ u32 XAxiDma_BdSetBufAddr(XAxiDma_Bd* BdPtr, UINTPTR Addr)
 u32 XAxiDma_BdSetBufAddrMicroMode(XAxiDma_Bd* BdPtr, UINTPTR Addr)
 {
 	if (Addr & XAXIDMA_MICROMODE_MIN_BUF_ALIGN) {
-			xil_printf("Error set buf addr %x and %x,"
-			" %x\r\n", Addr, XAXIDMA_MICROMODE_MIN_BUF_ALIGN,
+			printf("Error set buf addr %lx and %x,"
+			" %lx\r\n", Addr, XAXIDMA_MICROMODE_MIN_BUF_ALIGN,
 			Addr & XAXIDMA_MICROMODE_MIN_BUF_ALIGN);
 
 			return XST_INVALID_PARAM;
@@ -307,40 +308,40 @@ void XAxiDma_BdSetCtrl(XAxiDma_Bd* BdPtr, u32 Data)
 void XAxiDma_DumpBd(XAxiDma_Bd* BdPtr)
 {
 
-	xil_printf("Dump BD %x:\r\n", (UINTPTR)BdPtr);
-	xil_printf("\tNext Bd Ptr: %x\r\n",
+	printf("Dump BD %lx:\r\n", (UINTPTR)BdPtr);
+	printf("\tNext Bd Ptr: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_NDESC_OFFSET));
-	xil_printf("\tBuff addr: %x\r\n",
+	printf("\tBuff addr: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_BUFA_OFFSET));
-	xil_printf("\tMCDMA Fields: %x\r\n",
+	printf("\tMCDMA Fields: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_MCCTL_OFFSET));
-	xil_printf("\tVSIZE_STRIDE: %x\r\n",
+	printf("\tVSIZE_STRIDE: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr,
 					XAXIDMA_BD_STRIDE_VSIZE_OFFSET));
-	xil_printf("\tContrl len: %x\r\n",
+	printf("\tContrl len: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_CTRL_LEN_OFFSET));
-	xil_printf("\tStatus: %x\r\n",
+	printf("\tStatus: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_STS_OFFSET));
 
-	xil_printf("\tAPP 0: %x\r\n",
+	printf("\tAPP 0: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR0_OFFSET));
-	xil_printf("\tAPP 1: %x\r\n",
+	printf("\tAPP 1: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR1_OFFSET));
-	xil_printf("\tAPP 2: %x\r\n",
+	printf("\tAPP 2: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR2_OFFSET));
-	xil_printf("\tAPP 3: %x\r\n",
+	printf("\tAPP 3: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR3_OFFSET));
-	xil_printf("\tAPP 4: %x\r\n",
+	printf("\tAPP 4: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR4_OFFSET));
 
-	xil_printf("\tSW ID: %x\r\n",
+	printf("\tSW ID: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_ID_OFFSET));
-	xil_printf("\tStsCtrl: %x\r\n",
+	printf("\tStsCtrl: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr,
 	           XAXIDMA_BD_HAS_STSCNTRL_OFFSET));
-	xil_printf("\tDRE: %x\r\n",
+	printf("\tDRE: %x\r\n",
 	    (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_HAS_DRE_OFFSET));
 
-	xil_printf("\r\n");
+	printf("\r\n");
 }
 /** @} */

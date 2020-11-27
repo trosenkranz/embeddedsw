@@ -1,30 +1,8 @@
 /******************************************************************************
-*
-* Copyright (C) 2010 - 2019 Xilinx, Inc.  All rights reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-* XILINX  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
-* OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-* SOFTWARE.
-*
-* Except as contained in this notice, the name of the Xilinx shall not be used
-* in advertising or otherwise to promote the sale, use or other dealings in
-* this Software without prior written authorization from Xilinx.
-*
+* Copyright (C) 2010 - 2020 Xilinx, Inc.  All rights reserved.
+* SPDX-License-Identifier: MIT
 ******************************************************************************/
+
 /*****************************************************************************/
 /**
  *
@@ -73,11 +51,20 @@
  *                     ensure that "Successfully ran" and "Failed" strings are
  *                     available in all examples. This is a fix for CR-965028.
  * 9.9   rsp  01/21/19 Fix use of #elif check in deriving DDR_BASE_ADDR.
+ * 9.10  rsp  09/17/19 Fix cache maintenance ops for source and dest buffer.
  * </pre>
  *
  * ***************************************************************************
  */
 /***************************** Include Files *********************************/
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <cerrno>
+
 #include "xaxidma.h"
 #include "xparameters.h"
 #include "xdebug.h"
@@ -90,9 +77,9 @@
 #include "xuartns550_l.h"       /* to use uartns550 */
 #endif
 
-#if (!defined(DEBUG))
-extern void xil_printf(const char *format, ...);
-#endif
+//#if (!defined(DEBUG))
+//extern void xil_printf(const char *format, ...);
+//#endif
 
 /******************** Constant Definitions **********************************/
 
@@ -100,7 +87,7 @@ extern void xil_printf(const char *format, ...);
  * Device hardware build related constants.
  */
 
-#define DMA_DEV_ID		XPAR_AXIDMA_0_DEVICE_ID
+#define DMA_DEV_ID		0x00004712
 
 #ifdef XPAR_AXI_7SDDR_0_S_AXI_BASEADDR
 #define DDR_BASE_ADDR		XPAR_AXI_7SDDR_0_S_AXI_BASEADDR
@@ -129,7 +116,7 @@ extern void xil_printf(const char *format, ...);
 #define RX_BUFFER_HIGH		(MEM_BASE_ADDR + 0x004FFFFF)
 
 
-#define MAX_PKT_LEN		0x20
+#define MAX_PKT_LEN		4096
 #define MARK_UNCACHEABLE        0x701
 
 #define TEST_START_VALUE	0xC
@@ -162,6 +149,44 @@ XAxiDma AxiDma;
  */
 u32 *Packet = (u32 *) TX_BUFFER_BASE;
 
+
+int dmaFileDescriptor;
+
+void* mapDMAregisterSpace() {
+	const char *dev_name = "/dev/uio0";
+	void* ptr;
+	size_t map_size = 64 * 1024;
+
+
+    printf("Open device <%s>\n", dev_name);
+	dmaFileDescriptor = open(dev_name, O_RDWR | O_SYNC);
+	if (dmaFileDescriptor == -1) {
+		printf("Open failed.\r\n");
+		exit(1);
+	}
+
+	//printf("%i\r\n", dmaFileDescriptor);
+
+	printf("Map device memory\n");
+	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, dmaFileDescriptor, 0);
+	printf("Test");
+    if (ptr == MAP_FAILED) {
+		printf("Map failed. Fehler: %s\r\n", strerror(errno));
+		close(dmaFileDescriptor);
+		exit(1);
+    }
+
+	printf("Map successful.\r\n");
+	return ptr;
+}
+
+void releaseDMAregisterSpace(void* ptr) {
+	if (munmap(ptr, 64 * 1024) != 0) 
+		printf("Unmap failed?!?");
+
+	close(dmaFileDescriptor);
+}
+
 /*****************************************************************************/
 /**
 *
@@ -192,7 +217,7 @@ int main(void)
 
 #endif
 
-	xil_printf("\r\n--- Entering main() --- \r\n");
+	printf("\r\n--- Entering main() --- \r\n");
 
 #ifdef __aarch64__
 	Xil_SetTlbAttributes(TX_BD_SPACE_BASE, MARK_UNCACHEABLE);
@@ -201,20 +226,36 @@ int main(void)
 
 	Config = XAxiDma_LookupConfig(DMA_DEV_ID);
 	if (!Config) {
-		xil_printf("No config found for %d\r\n", DMA_DEV_ID);
+		printf("No config found for %d\r\n", DMA_DEV_ID);
 
 		return XST_FAILURE;
 	}
+
+	void* dmaRegisterSpace = mapDMAregisterSpace();
+
+	printf("sizeof void*: %lu\r\n", sizeof(dmaRegisterSpace));
+
+	printf("Address: %lu\r\n", *(uint64_t*)(dmaRegisterSpace));
+
+	volatile uint64_t DMARCR = (UINTPTR)(dmaRegisterSpace);
+
+	printf("%lu\r\n", DMARCR);
+
+	printf("Map success\r\n");
+	releaseDMAregisterSpace(dmaRegisterSpace);
+	return 0;
+
+	Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
 
 	/* Initialize DMA engine */
 	Status = XAxiDma_CfgInitialize(&AxiDma, Config);
 	if (Status != XST_SUCCESS) {
-		xil_printf("Initialization failed %d\r\n", Status);
+		printf("Initialization failed %d\r\n", Status);
 		return XST_FAILURE;
 	}
 
 	if(!XAxiDma_HasSg(&AxiDma)) {
-		xil_printf("Device configured as Simple mode \r\n");
+		printf("Device configured as Simple mode \r\n");
 
 		return XST_FAILURE;
 	}
@@ -239,12 +280,14 @@ int main(void)
 	Status = CheckDmaResult(&AxiDma);
 
 	if (Status != XST_SUCCESS) {
-		xil_printf("AXI DMA SG Polling Example Failed\r\n");
+		printf("AXI DMA SG Polling Example Failed\r\n");
 		return XST_FAILURE;
 	}
 
-	xil_printf("Successfully ran AXI DMA SG Polling Example\r\n");
-	xil_printf("--- Exiting main() --- \r\n");
+	printf("Successfully ran AXI DMA SG Polling Example\r\n");
+	printf("--- Exiting main() --- \r\n");
+
+	releaseDMAregisterSpace(dmaRegisterSpace);
 
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
@@ -325,7 +368,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 				XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
 
 	if (Status != XST_SUCCESS) {
-		xil_printf("RX create BD ring failed %d\r\n", Status);
+		printf("RX create BD ring failed %d\r\n", Status);
 
 		return XST_FAILURE;
 	}
@@ -337,7 +380,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 
 	Status = XAxiDma_BdRingClone(RxRingPtr, &BdTemplate);
 	if (Status != XST_SUCCESS) {
-		xil_printf("RX clone BD failed %d\r\n", Status);
+		printf("RX clone BD failed %d\r\n", Status);
 
 		return XST_FAILURE;
 	}
@@ -348,7 +391,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 
 	Status = XAxiDma_BdRingAlloc(RxRingPtr, FreeBdCount, &BdPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("RX alloc BD failed %d\r\n", Status);
+		printf("RX alloc BD failed %d\r\n", Status);
 
 		return XST_FAILURE;
 	}
@@ -359,7 +402,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 		Status = XAxiDma_BdSetBufAddr(BdCurPtr, RxBufferPtr);
 
 		if (Status != XST_SUCCESS) {
-			xil_printf("Set buffer addr %x on BD %x failed %d\r\n",
+			printf("Set buffer addr %x on BD %lx failed %d\r\n",
 			    (unsigned int)RxBufferPtr,
 			    (UINTPTR)BdCurPtr, Status);
 
@@ -369,7 +412,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 		Status = XAxiDma_BdSetLength(BdCurPtr, MAX_PKT_LEN,
 				RxRingPtr->MaxTransferLen);
 		if (Status != XST_SUCCESS) {
-			xil_printf("Rx set length %d on BD %x failed %d\r\n",
+			printf("Rx set length %d on BD %lx failed %d\r\n",
 			    MAX_PKT_LEN, (UINTPTR)BdCurPtr, Status);
 
 			return XST_FAILURE;
@@ -392,7 +435,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 	Status = XAxiDma_BdRingToHw(RxRingPtr, FreeBdCount,
 						BdPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("RX submit hw failed %d\r\n", Status);
+		printf("RX submit hw failed %d\r\n", Status);
 
 		return XST_FAILURE;
 	}
@@ -400,7 +443,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 	/* Start RX DMA channel */
 	Status = XAxiDma_BdRingStart(RxRingPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("RX start hw failed %d\r\n", Status);
+		printf("RX start hw failed %d\r\n", Status);
 
 		return XST_FAILURE;
 	}
@@ -447,7 +490,7 @@ static int TxSetup(XAxiDma * AxiDmaInstPtr)
 				TX_BD_SPACE_BASE,
 				XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
 	if (Status != XST_SUCCESS) {
-		xil_printf("failed create BD ring in txsetup\r\n");
+		printf("failed create BD ring in txsetup\r\n");
 
 		return XST_FAILURE;
 	}
@@ -459,7 +502,7 @@ static int TxSetup(XAxiDma * AxiDmaInstPtr)
 
 	Status = XAxiDma_BdRingClone(TxRingPtr, &BdTemplate);
 	if (Status != XST_SUCCESS) {
-		xil_printf("failed bdring clone in txsetup %d\r\n", Status);
+		printf("failed bdring clone in txsetup %d\r\n", Status);
 
 		return XST_FAILURE;
 	}
@@ -467,7 +510,7 @@ static int TxSetup(XAxiDma * AxiDmaInstPtr)
 	/* Start the TX channel */
 	Status = XAxiDma_BdRingStart(TxRingPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("failed start bdring txsetup %d\r\n", Status);
+		printf("failed start bdring txsetup %d\r\n", Status);
 
 		return XST_FAILURE;
 	}
@@ -510,14 +553,11 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 		Value = (Value + 1) & 0xFF;
 	}
 
-	/* Flush the SrcBuffer before the DMA transfer, in case the Data Cache
+	/* Flush the buffers before the DMA transfer, in case the Data Cache
 	 * is enabled
 	 */
-	Xil_DCacheFlushRange((UINTPTR)TxPacket, MAX_PKT_LEN);
-#ifdef __aarch64__
-	Xil_DCacheFlushRange((UINTPTR)RX_BUFFER_BASE, MAX_PKT_LEN);
-#endif
-
+	//Xil_DCacheFlushRange((UINTPTR)TxPacket, MAX_PKT_LEN);
+	//Xil_DCacheFlushRange((UINTPTR)RX_BUFFER_BASE, MAX_PKT_LEN);
 
 	/* Allocate a BD */
 	Status = XAxiDma_BdRingAlloc(TxRingPtr, 1, &BdPtr);
@@ -528,7 +568,7 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 	/* Set up the BD using the information of the packet to transmit */
 	Status = XAxiDma_BdSetBufAddr(BdPtr, (UINTPTR) Packet);
 	if (Status != XST_SUCCESS) {
-		xil_printf("Tx set buffer addr %x on BD %x failed %d\r\n",
+		printf("Tx set buffer addr %lx on BD %lx failed %d\r\n",
 		    (UINTPTR)Packet, (UINTPTR)BdPtr, Status);
 
 		return XST_FAILURE;
@@ -537,7 +577,7 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 	Status = XAxiDma_BdSetLength(BdPtr, MAX_PKT_LEN,
 				TxRingPtr->MaxTransferLen);
 	if (Status != XST_SUCCESS) {
-		xil_printf("Tx set length %d on BD %x failed %d\r\n",
+		printf("Tx set length %d on BD %lx failed %d\r\n",
 		    MAX_PKT_LEN, (UINTPTR)BdPtr, Status);
 
 		return XST_FAILURE;
@@ -550,7 +590,7 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 	/* If Set app length failed, it is not fatal
 	 */
 	if (Status != XST_SUCCESS) {
-		xil_printf("Set app word failed with %d\r\n", Status);
+		printf("Set app word failed with %d\r\n", Status);
 	}
 #endif
 
@@ -564,7 +604,7 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 	/* Give the BD to DMA to kick off the transmission. */
 	Status = XAxiDma_BdRingToHw(TxRingPtr, 1, BdPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("to hw failed %d\r\n", Status);
+		printf("to hw failed %d\r\n", Status);
 		return XST_FAILURE;
 	}
 
@@ -599,13 +639,11 @@ static int CheckData(void)
 	/* Invalidate the DestBuffer before receiving the data, in case the
 	 * Data Cache is enabled
 	 */
-#ifndef __aarch64__
-	Xil_DCacheInvalidateRange((UINTPTR)RxPacket, MAX_PKT_LEN);
-#endif
+	//Xil_DCacheInvalidateRange((UINTPTR)RxPacket, MAX_PKT_LEN);
 
 	for(Index = 0; Index < MAX_PKT_LEN; Index++) {
 		if (RxPacket[Index] != Value) {
-			xil_printf("Data error %d: %x/%x\r\n",
+			printf("Data error %d: %x/%x\r\n",
 			    Index, (unsigned int)RxPacket[Index],
 			    (unsigned int)Value);
 
@@ -652,7 +690,7 @@ static int CheckDmaResult(XAxiDma * AxiDmaInstPtr)
 	/* Free all processed TX BDs for future transmission */
 	Status = XAxiDma_BdRingFree(TxRingPtr, ProcessedBdCount, BdPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("Failed to free %d tx BDs %d\r\n",
+		printf("Failed to free %d tx BDs %d\r\n",
 		    ProcessedBdCount, Status);
 		return XST_FAILURE;
 	}
@@ -672,7 +710,7 @@ static int CheckDmaResult(XAxiDma * AxiDmaInstPtr)
 	/* Free all processed RX BDs for future transmission */
 	Status = XAxiDma_BdRingFree(RxRingPtr, ProcessedBdCount, BdPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("Failed to free %d rx BDs %d\r\n",
+		printf("Failed to free %d rx BDs %d\r\n",
 		    ProcessedBdCount, Status);
 		return XST_FAILURE;
 	}
@@ -685,13 +723,13 @@ static int CheckDmaResult(XAxiDma * AxiDmaInstPtr)
 	FreeBdCount = XAxiDma_BdRingGetFreeCnt(RxRingPtr);
 	Status = XAxiDma_BdRingAlloc(RxRingPtr, FreeBdCount, &BdPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("bd alloc failed\r\n");
+		printf("bd alloc failed\r\n");
 		return XST_FAILURE;
 	}
 
 	Status = XAxiDma_BdRingToHw(RxRingPtr, FreeBdCount, BdPtr);
 	if (Status != XST_SUCCESS) {
-		xil_printf("Submit %d rx BDs failed %d\r\n", FreeBdCount, Status);
+		printf("Submit %d rx BDs failed %d\r\n", FreeBdCount, Status);
 		return XST_FAILURE;
 	}
 
