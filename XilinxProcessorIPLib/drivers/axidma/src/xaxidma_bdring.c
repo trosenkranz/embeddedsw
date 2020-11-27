@@ -51,6 +51,7 @@
 /***************************** Include Files *********************************/
 
 #include "xaxidma_bdring.h"
+#include <stdio.h>
 
 /************************** Constant Definitions *****************************/
 /* Use 100 milliseconds for 100 MHz
@@ -1565,29 +1566,29 @@ void XAxiDma_BdRingDumpRegs(XAxiDma_BdRing *RingPtr) {
 	UINTPTR RegBase = RingPtr->ChanBase;
 	int RingIndex = RingPtr->RingIndex;
 
-	xil_printf("Dump registers %p:\r\n", (void *)RegBase);
-	xil_printf("Control REG: %08x\r\n",
+	printf("Dump registers %p:\r\n", (void *)RegBase);
+	printf("Control REG: %08x\r\n",
 		(unsigned int)XAxiDma_ReadReg(RegBase, XAXIDMA_CR_OFFSET));
-	xil_printf("Status REG: %08x\r\n",
+	printf("Status REG: %08x\r\n",
 		(unsigned int)XAxiDma_ReadReg(RegBase, XAXIDMA_SR_OFFSET));
 
 	if (RingIndex) {
-	xil_printf("Cur BD REG: %08x\r\n",
+	printf("Cur BD REG: %08x\r\n",
 		(unsigned int)XAxiDma_ReadReg(RegBase,
 		XAXIDMA_RX_CDESC0_OFFSET + ((RingIndex - 1) *
 		XAXIDMA_RX_NDESC_OFFSET)));
-	xil_printf("Tail BD REG: %08x\r\n",
+	printf("Tail BD REG: %08x\r\n",
 		(unsigned int)XAxiDma_ReadReg(RegBase,
 		XAXIDMA_RX_TDESC0_OFFSET + ((RingIndex - 1) *
 		XAXIDMA_RX_NDESC_OFFSET)));
 	}
 	else {
-	xil_printf("Cur BD REG: %08x\r\n",
+	printf("Cur BD REG: %08x\r\n",
 		(unsigned int)XAxiDma_ReadReg(RegBase, XAXIDMA_CDESC_OFFSET));
-	xil_printf("Tail BD REG: %08x\r\n",
+	printf("Tail BD REG: %08x\r\n",
 		(unsigned int)XAxiDma_ReadReg(RegBase, XAXIDMA_TDESC_OFFSET));
 	}
 
-	xil_printf("\r\n");
+	printf("\r\n");
 }
 /** @} */

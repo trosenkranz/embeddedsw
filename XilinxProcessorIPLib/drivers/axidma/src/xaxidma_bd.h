@@ -92,7 +92,7 @@ extern "C" {
 #include "xaxidma_hw.h"
 #include "xstatus.h"
 #include "xdebug.h"
-#include "xil_cache.h"
+//#include "xil_cache.h"
 
 #ifdef __MICROBLAZE__
 #include "xenv.h"
@@ -122,10 +122,10 @@ typedef u32 XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
 #define XAXIDMA_CACHE_INVALIDATE(BdPtr)
 #else
 #define XAXIDMA_CACHE_FLUSH(BdPtr) \
-	Xil_DCacheFlushRange((UINTPTR)(BdPtr), XAXIDMA_BD_HW_NUM_BYTES)
+	//Xil_DCacheFlushRange((UINTPTR)(BdPtr), XAXIDMA_BD_HW_NUM_BYTES)
 
 #define XAXIDMA_CACHE_INVALIDATE(BdPtr) \
-	Xil_DCacheInvalidateRange((UINTPTR)(BdPtr), XAXIDMA_BD_HW_NUM_BYTES)
+	//Xil_DCacheInvalidateRange((UINTPTR)(BdPtr), XAXIDMA_BD_HW_NUM_BYTES)
 #endif
 
 /*****************************************************************************/

@@ -38,7 +38,7 @@ extern "C" {
 /***************************** Include Files *********************************/
 
 #include "xil_types.h"
-#include "xil_printf.h"
+//#include "xil_printf.h"
 #include "xstatus.h"
 
 #if defined (__MICROBLAZE__)
@@ -62,7 +62,8 @@ extern u32 XStl_RegUpdate(u32 RegAddr, u32 RegVal);
 # else
 #  define SYNCHRONIZE_IO	dmb()
 #  define INST_SYNC		isb()
-#  define DATA_SYNC		dsb()
+//#  define DATA_SYNC		dsb()
+#  define DATA_SYNC
 # endif
 #else
 # define SYNCHRONIZE_IO

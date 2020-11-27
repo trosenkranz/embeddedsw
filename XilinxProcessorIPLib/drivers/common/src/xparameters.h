@@ -176,29 +176,29 @@ deleted XPAR_INTC_0_MAX_ID, XPAR_INTC_1_MAX_ID
  * NS16550 UART defines.
  * DeviceID starts at 20
  */
-#define XPAR_XUARTNS550_NUM_INSTANCES 1         /* Number of instances */
+//#define XPAR_XUARTNS550_NUM_INSTANCES 1         /* Number of instances */
 
-#define XPAR_UARTNS550_0_DEVICE_ID   20         /* Device ID for instance */
-#define XPAR_UARTNS550_0_BASEADDR    0xA0010000 /* IPIF base address */
-#define XPAR_UARTNS550_0_CLOCK_HZ    (66000000L)/* 66 MHz clock */
+//#define XPAR_UARTNS550_0_DEVICE_ID   20         /* Device ID for instance */
+//#define XPAR_UARTNS550_0_BASEADDR    0xA0010000 /* IPIF base address */
+//#define XPAR_UARTNS550_0_CLOCK_HZ    (66000000L)/* 66 MHz clock */
 
-#define XPAR_UARTNS550_1_DEVICE_ID   21         /* Device ID for instance */
-#define XPAR_UARTNS550_1_BASEADDR    0xA0000000 /* IPIF base address */
-#define XPAR_UARTNS550_1_CLOCK_HZ    (66000000L)/* 66 MHz clock */
+//#define XPAR_UARTNS550_1_DEVICE_ID   21         /* Device ID for instance */
+//#define XPAR_UARTNS550_1_BASEADDR    0xA0000000 /* IPIF base address */
+//#define XPAR_UARTNS550_1_CLOCK_HZ    (66000000L)/* 66 MHz clock */
 
 /*****************************************************************************
  *
  * UartLite defines.
  * DeviceID starts at 30
  */
-#define XPAR_XUARTLITE_NUM_INSTANCES 1         /* Number of instances */
+//#define XPAR_XUARTLITE_NUM_INSTANCES 1         /* Number of instances */
 
-#define XPAR_UARTLITE_0_DEVICE_ID   30         /* Device ID for instance */
-#define XPAR_UARTLITE_0_BASEADDR    0xA0020000 /* Device base address */
-#define XPAR_UARTLITE_0_BAUDRATE    19200      /* Baud rate */
-#define XPAR_UARTLITE_0_USE_PARITY  FALSE      /* Parity generator enabled */
-#define XPAR_UARTLITE_0_ODD_PARITY  FALSE      /* Type of parity generated */
-#define XPAR_UARTLITE_0_DATA_BITS   8          /* Data bits */
+//#define XPAR_UARTLITE_0_DEVICE_ID   30         /* Device ID for instance */
+//#define XPAR_UARTLITE_0_BASEADDR    0xA0020000 /* Device base address */
+//#define XPAR_UARTLITE_0_BAUDRATE    19200      /* Baud rate */
+//#define XPAR_UARTLITE_0_USE_PARITY  FALSE      /* Parity generator enabled */
+//#define XPAR_UARTLITE_0_ODD_PARITY  FALSE      /* Type of parity generated */
+//#define XPAR_UARTLITE_0_DATA_BITS   8          /* Data bits */
 
 /*****************************************************************************
  *
