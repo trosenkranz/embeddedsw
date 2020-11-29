@@ -64,10 +64,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <cerrno>
+#include <functional>
 
 #include "xaxidma.h"
 #include "xparameters.h"
 #include "xdebug.h"
+#include "xaxidma_example_sg_poll.hpp"
 
 #ifdef __aarch64__
 #include "xil_mmu.h"
@@ -149,6 +151,44 @@ XAxiDma AxiDma;
  */
 u32 *Packet = (u32 *) TX_BUFFER_BASE;
 
+memory_mapping_t dmaRegisterDeviceMapping;
+memory_mapping_t bufferDescriptorMapping;
+
+int mapMemoryFromDeviceName(const char* device_name, struct memory_mapping_t* map) {
+	void* ptr;
+	size_t map_size = 64 * 1024;
+
+
+    printf("Open device <%s>\n", device_name);
+	map->fileDescriptor = open(device_name, O_RDWR | O_SYNC);
+	if (map->fileDescriptor == -1) {
+		printf("Open failed.\r\n");
+		return 1;
+	}
+
+	atexit(std::function<void()>([=](){close(map->fileDescriptor);}));
+
+	//printf("%i\r\n", map->fileDescriptor);
+
+	printf("Map memory of <%s>\n", device_name);
+	map->vAddressSpacePtr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, map->fileDescriptor, 0);
+    if (map->vAddressSpacePtr == MAP_FAILED) {
+		printf("Map failed. Fehler: %s\r\n", strerror(errno));
+		close(map->fileDescriptor);
+		return 1;
+    }
+
+	printf("Map successful.\r\n");
+
+	return 0;
+}
+
+void releaseDMAregisterSpace(void* ptr) {
+	if (munmap(ptr, 64 * 1024) != 0) 
+		printf("Unmap failed?!?");
+
+	close(dmaFileDescriptor);
+}
 
 int dmaFileDescriptor;
 
@@ -233,17 +273,18 @@ int main(void)
 
 	void* dmaRegisterSpace = mapDMAregisterSpace();
 
-	printf("sizeof void*: %lu\r\n", sizeof(dmaRegisterSpace));
+	//printf("sizeof void*: %lu\r\n", sizeof(dmaRegisterSpace));
 
-	printf("Address: %lu\r\n", *(uint64_t*)(dmaRegisterSpace));
+	//printf("Address: %lu\r\n", *(uint64_t*)(dmaRegisterSpace));
 
-	volatile uint64_t DMARCR = (UINTPTR)(dmaRegisterSpace);
-
-	printf("%lu\r\n", DMARCR);
+	//volatile uint64_t DMARCR = (UINTPTR)(dmaRegisterSpace);
+	//printf("%lu\r\n", DMARCR);
 
 	printf("Map success\r\n");
-	releaseDMAregisterSpace(dmaRegisterSpace);
-	return 0;
+	//releaseDMAregisterSpace(dmaRegisterSpace);
+	//return 0;
+
+
 
 	Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
 
