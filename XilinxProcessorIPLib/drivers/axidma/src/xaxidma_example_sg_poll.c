@@ -65,6 +65,8 @@
 #include <sys/stat.h>
 #include <cerrno>
 #include <functional>
+#include <random>
+#include <cstring>
 
 #include "xaxidma.h"
 #include "xparameters.h"
@@ -151,6 +153,7 @@ XAxiDma AxiDma;
  */
 u32 *Packet = (u32 *) TX_BUFFER_BASE;
 
+/*
 memory_mapping_t dmaRegisterDeviceMapping;
 memory_mapping_t bufferDescriptorMapping;
 
@@ -189,7 +192,7 @@ void releaseDMAregisterSpace(void* ptr) {
 
 	close(dmaFileDescriptor);
 }
-
+*/
 int dmaFileDescriptor;
 
 void* mapDMAregisterSpace() {
@@ -225,6 +228,134 @@ void releaseDMAregisterSpace(void* ptr) {
 		printf("Unmap failed?!?");
 
 	close(dmaFileDescriptor);
+}
+
+int BDfileDescriptor;
+
+void* mapBDmemorySpace()
+{
+	const char *dev_name = "/dev/udmabuf2";
+	void* ptr;
+	size_t map_size = 8 * 1024;
+
+
+    printf("Open device <%s>\n", dev_name);
+	BDfileDescriptor = open(dev_name, O_RDWR | O_SYNC);
+	if (BDfileDescriptor == -1) {
+		printf("Open failed.\r\n");
+		exit(1);
+	}
+
+	printf("Map device memory\n");
+	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, BDfileDescriptor, 0);
+	printf("Test");
+    if (ptr == MAP_FAILED) {
+		printf("Map failed. Fehler: %s\r\n", strerror(errno));
+		close(BDfileDescriptor);
+		exit(1);
+    }
+
+	printf("Map successful.\r\n");
+	return ptr;
+}
+
+void releaseBDmemorySpace(void* ptr)
+{
+	if (munmap(ptr, 8 * 1024) != 0) 
+		printf("Unmap failed?!?");
+
+	close(BDfileDescriptor);
+}
+
+int srcFileDescriptor;
+
+void* mapSrcMemorySpace()
+{
+	const char *dev_name = "/dev/udmabuf0";
+	void* ptr;
+	size_t map_size = 1024 * 1024;
+
+
+    printf("Open device <%s>\n", dev_name);
+	srcFileDescriptor = open(dev_name, O_RDWR | O_SYNC);
+	if (srcFileDescriptor == -1) {
+		printf("Open failed.\r\n");
+		exit(1);
+	}
+
+	printf("Map device memory\n");
+	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, srcFileDescriptor, 0);
+	printf("Test");
+    if (ptr == MAP_FAILED) {
+		printf("Map failed. Fehler: %s\r\n", strerror(errno));
+		close(srcFileDescriptor);
+		exit(1);
+    }
+
+	printf("Map successful.\r\n");
+	return ptr;
+}
+
+void releaseSrcMemorySpace(void* ptr)
+{
+	if (munmap(ptr, 1024 * 1024) != 0) 
+		printf("Unmap failed?!?");
+
+	close(srcFileDescriptor);
+}
+
+int destFileDescriptor;
+
+void* mapDestMemorySpace()
+{
+	const char *dev_name = "/dev/udmabuf1";
+	void* ptr;
+	size_t map_size = 1024 * 1024;
+
+
+    printf("Open device <%s>\n", dev_name);
+	destFileDescriptor = open(dev_name, O_RDWR | O_SYNC);
+	if (destFileDescriptor == -1) {
+		printf("Open failed.\r\n");
+		exit(1);
+	}
+
+	printf("Map device memory\n");
+	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, destFileDescriptor, 0);
+	printf("Test");
+    if (ptr == MAP_FAILED) {
+		printf("Map failed. Fehler: %s\r\n", strerror(errno));
+		close(destFileDescriptor);
+		exit(1);
+    }
+
+	printf("Map successful.\r\n");
+	return ptr;
+}
+
+void releaseDestMemorySpace(void* ptr)
+{
+	if (munmap(ptr, 1024 * 1024) != 0) 
+		printf("Unmap failed?!?");
+
+	close(destFileDescriptor);
+}
+
+void fillMemoryWithRandomData(void* ptr)
+{
+	std::mt19937 rand(0x12345678); // Use a known initial state for rand to be able to reproduce values.
+
+	for(uint32_t i = 0; i < (1024*1024/4); ++i) // rand returns a 32bit value, therefore we devide the buffersize by 4
+		*(uint32_t*)(ptr + 4*i) = rand(); // and write only to memory locations with its two lsb bits unset...
+}
+
+void verifyMemoryContents(void* src, void* dest)
+{
+	int rc = std::memcmp(src, dest, 1024*1024);
+    if(rc == 0)
+        printf("Both memory locations contain the same content. Hurray...\r\n");
+    else
+		printf("Memory locations differ.\r\n");
 }
 
 /*****************************************************************************/
@@ -271,7 +402,7 @@ int main(void)
 		return XST_FAILURE;
 	}
 
-	void* dmaRegisterSpace = mapDMAregisterSpace();
+	//void* dmaRegisterSpace = mapDMAregisterSpace();
 
 	//printf("sizeof void*: %lu\r\n", sizeof(dmaRegisterSpace));
 
@@ -280,13 +411,32 @@ int main(void)
 	//volatile uint64_t DMARCR = (UINTPTR)(dmaRegisterSpace);
 	//printf("%lu\r\n", DMARCR);
 
-	printf("Map success\r\n");
+	//printf("Map success\r\n");
 	//releaseDMAregisterSpace(dmaRegisterSpace);
 	//return 0;
 
 
+	void* BDmemorySpace = mapBDmemorySpace();
+	void* srcMemorySpace = mapSrcMemorySpace();
+	void* destMemorySpace = mapDestMemorySpace();
 
-	Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
+	printf("All Memory Spaces Mapped.\r\n");
+
+	fillMemoryWithRandomData(srcMemorySpace);
+	fillMemoryWithRandomData(destMemorySpace);
+
+	verifyMemoryContents(srcMemorySpace, destMemorySpace);
+
+	releaseBDmemorySpace(BDmemorySpace);
+	releaseSrcMemorySpace(srcMemorySpace);
+	releaseDestMemorySpace(destMemorySpace);
+
+	printf("All Memory Spaces Unmapped. Exiting...\r\n");
+	return 0;
+
+
+
+	//Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
 
 	/* Initialize DMA engine */
 	Status = XAxiDma_CfgInitialize(&AxiDma, Config);
@@ -328,7 +478,7 @@ int main(void)
 	printf("Successfully ran AXI DMA SG Polling Example\r\n");
 	printf("--- Exiting main() --- \r\n");
 
-	releaseDMAregisterSpace(dmaRegisterSpace);
+	//releaseDMAregisterSpace(dmaRegisterSpace);
 
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
