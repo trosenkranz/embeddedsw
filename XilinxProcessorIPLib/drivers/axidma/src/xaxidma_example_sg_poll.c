@@ -318,6 +318,60 @@ void verifyMemoryContents(void* src, void* dest)
 		printf("Memory locations differ.\r\n");
 }
 
+UINTPTR RxBDphysicalAddress;
+UINTPTR TxBDphysicalAddress;
+
+UINTPTR getBDphysicalAddress()
+{
+	int fd;
+	char  attr[1024];
+    unsigned long  phys_addr;
+    if ((fd  = open("/sys/class/u-dma-buf/udmabuf2/phys_addr", O_RDONLY)) != -1) {
+        read(fd, attr, 1024);
+        sscanf(attr, "%lx", &phys_addr);
+        close(fd);
+    }
+
+	printf("BD space physical address: %lu\r\n", phys_addr);
+
+	return phys_addr;
+}
+
+UINTPTR getSrcPhysicalAddress()
+{
+	int fd;
+	char  attr[1024];
+    unsigned long  phys_addr;
+    if ((fd  = open("/sys/class/u-dma-buf/udmabuf0/phys_addr", O_RDONLY)) != -1) {
+        read(fd, attr, 1024);
+        sscanf(attr, "%lx", &phys_addr);
+        close(fd);
+    }
+
+	printf("SRC space physical address: %lu\r\n", phys_addr);
+
+	return phys_addr;
+}
+
+UINTPTR RxBufferBaseAddress;
+
+UINTPTR getDestPhysicalAddress()
+{
+	int fd;
+	char  attr[1024];
+    unsigned long  phys_addr;
+    if ((fd  = open("/sys/class/u-dma-buf/udmabuf1/phys_addr", O_RDONLY)) != -1) {
+        read(fd, attr, 1024);
+        sscanf(attr, "%lx", &phys_addr);
+        close(fd);
+    }
+
+	printf("DEST space physical address: %lu\r\n", phys_addr);
+
+	return phys_addr;
+}
+
+
 /*****************************************************************************/
 /**
 *
@@ -386,6 +440,12 @@ int main(void)
 	fillMemoryWithRandomData(destMemorySpace);
 
 	verifyMemoryContents(srcMemorySpace, destMemorySpace);
+
+	RxBDphysicalAddress = getBDphysicalAddress();
+	TxBDphysicalAddress = RxBDphysicalAddress + 0x1000;
+	printf("%lu\r\n", TxBDphysicalAddress);
+	getSrcPhysicalAddress();
+	RxBufferBaseAddress = getDestPhysicalAddress();
 
 	releaseBDmemorySpace(BDmemorySpace);
 	releaseSrcMemorySpace(srcMemorySpace);
@@ -511,11 +571,12 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 	XAxiDma_BdRingSetCoalesce(RxRingPtr, Coalesce, Delay);
 
 	/* Setup Rx BD space */
-	BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT,
-				RX_BD_SPACE_HIGH - RX_BD_SPACE_BASE + 1);
+	//BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT,
+	//			RX_BD_SPACE_HIGH - RX_BD_SPACE_BASE + 1);
+	BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT, 0x1000); // We hardcode the number of BD in RX
 
-	Status = XAxiDma_BdRingCreate(RxRingPtr, RX_BD_SPACE_BASE,
-				RX_BD_SPACE_BASE,
+	Status = XAxiDma_BdRingCreate(RxRingPtr, RxBDphysicalAddress,
+				RxBDphysicalAddress,
 				XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
 
 	if (Status != XST_SUCCESS) {
@@ -548,7 +609,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 	}
 
 	BdCurPtr = BdPtr;
-	RxBufferPtr = RX_BUFFER_BASE;
+	RxBufferPtr = RxBufferBaseAddress;
 	for (Index = 0; Index < FreeBdCount; Index++) {
 		Status = XAxiDma_BdSetBufAddr(BdCurPtr, RxBufferPtr);
 
@@ -581,7 +642,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 
 	/* Clear the receive buffer, so we can verify data
 	 */
-	memset((void *)RX_BUFFER_BASE, 0, MAX_PKT_LEN);
+	memset((void *)RxBufferBaseAddress, 0, MAX_PKT_LEN);
 
 	Status = XAxiDma_BdRingToHw(RxRingPtr, FreeBdCount,
 						BdPtr);
@@ -634,11 +695,12 @@ static int TxSetup(XAxiDma * AxiDmaInstPtr)
 	XAxiDma_BdRingSetCoalesce(TxRingPtr, Coalesce, Delay);
 
 	/* Setup TxBD space  */
-	BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT,
-				TX_BD_SPACE_HIGH - TX_BD_SPACE_BASE + 1);
+	//BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT,
+	//			TX_BD_SPACE_HIGH - TX_BD_SPACE_BASE + 1);
+	BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT, 0x1000); // We hardcode the number of BD in TX
 
-	Status = XAxiDma_BdRingCreate(TxRingPtr, TX_BD_SPACE_BASE,
-				TX_BD_SPACE_BASE,
+	Status = XAxiDma_BdRingCreate(TxRingPtr, TxBDphysicalAddress,
+				TxBDphysicalAddress,
 				XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
 	if (Status != XST_SUCCESS) {
 		printf("failed create BD ring in txsetup\r\n");
@@ -784,7 +846,7 @@ static int CheckData(void)
 	u8 Value;
 
 
-	RxPacket = (u8 *) RX_BUFFER_BASE;
+	RxPacket = (u8 *) RxBufferBaseAddress;
 	Value = TEST_START_VALUE;
 
 	/* Invalidate the DestBuffer before receiving the data, in case the
