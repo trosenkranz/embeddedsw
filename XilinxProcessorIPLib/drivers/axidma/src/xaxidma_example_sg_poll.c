@@ -153,46 +153,6 @@ XAxiDma AxiDma;
  */
 u32 *Packet = (u32 *) TX_BUFFER_BASE;
 
-/*
-memory_mapping_t dmaRegisterDeviceMapping;
-memory_mapping_t bufferDescriptorMapping;
-
-int mapMemoryFromDeviceName(const char* device_name, struct memory_mapping_t* map) {
-	void* ptr;
-	size_t map_size = 64 * 1024;
-
-
-    printf("Open device <%s>\n", device_name);
-	map->fileDescriptor = open(device_name, O_RDWR | O_SYNC);
-	if (map->fileDescriptor == -1) {
-		printf("Open failed.\r\n");
-		return 1;
-	}
-
-	atexit(std::function<void()>([=](){close(map->fileDescriptor);}));
-
-	//printf("%i\r\n", map->fileDescriptor);
-
-	printf("Map memory of <%s>\n", device_name);
-	map->vAddressSpacePtr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, map->fileDescriptor, 0);
-    if (map->vAddressSpacePtr == MAP_FAILED) {
-		printf("Map failed. Fehler: %s\r\n", strerror(errno));
-		close(map->fileDescriptor);
-		return 1;
-    }
-
-	printf("Map successful.\r\n");
-
-	return 0;
-}
-
-void releaseDMAregisterSpace(void* ptr) {
-	if (munmap(ptr, 64 * 1024) != 0) 
-		printf("Unmap failed?!?");
-
-	close(dmaFileDescriptor);
-}
-*/
 int dmaFileDescriptor;
 
 void* mapDMAregisterSpace() {
