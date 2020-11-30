@@ -170,16 +170,17 @@ void* mapDMAregisterSpace() {
 
 	//printf("%i\r\n", dmaFileDescriptor);
 
-	printf("Map device memory\n");
+	//printf("Map device memory\n");
 	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, dmaFileDescriptor, 0);
-	printf("Test");
     if (ptr == MAP_FAILED) {
 		printf("Map failed. Fehler: %s\r\n", strerror(errno));
 		close(dmaFileDescriptor);
 		exit(1);
     }
 
-	printf("Map successful.\r\n");
+	//printf("Map successful.\r\n");
+	//printf("DMA register space virtual address: %lu\r\n", (UINTPTR)ptr);
+	//printf("DMA register space virtual address: %lx\r\n", (UINTPTR)ptr);
 	return ptr;
 }
 
@@ -206,16 +207,17 @@ void* mapBDmemorySpace()
 		exit(1);
 	}
 
-	printf("Map device memory\n");
+	//printf("Map device memory\n");
 	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, BDfileDescriptor, 0);
-	printf("Test");
     if (ptr == MAP_FAILED) {
 		printf("Map failed. Fehler: %s\r\n", strerror(errno));
 		close(BDfileDescriptor);
 		exit(1);
     }
 
-	printf("Map successful.\r\n");
+	//printf("Map successful.\r\n");
+	//printf("BD space virtual address: %lu\r\n", (UINTPTR)ptr);
+	//printf("BD space virtual address: %lx\r\n", (UINTPTR)ptr);
 	return ptr;
 }
 
@@ -243,16 +245,17 @@ void* mapSrcMemorySpace()
 		exit(1);
 	}
 
-	printf("Map device memory\n");
+	//printf("Map device memory\n");
 	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, srcFileDescriptor, 0);
-	printf("Test");
     if (ptr == MAP_FAILED) {
 		printf("Map failed. Fehler: %s\r\n", strerror(errno));
 		close(srcFileDescriptor);
 		exit(1);
     }
 
-	printf("Map successful.\r\n");
+	//printf("Map successful.\r\n");
+	//printf("SRC space virtual address: %lu\r\n", (UINTPTR)ptr);
+	//printf("SRC space virtual address: %lx\r\n", (UINTPTR)ptr);
 	return ptr;
 }
 
@@ -280,16 +283,17 @@ void* mapDestMemorySpace()
 		exit(1);
 	}
 
-	printf("Map device memory\n");
+	//printf("Map device memory\n");
 	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, destFileDescriptor, 0);
-	printf("Test");
     if (ptr == MAP_FAILED) {
 		printf("Map failed. Fehler: %s\r\n", strerror(errno));
 		close(destFileDescriptor);
 		exit(1);
     }
 
-	printf("Map successful.\r\n");
+	//printf("Map successful.\r\n");
+	//printf("DEST space virtual address: %lu\r\n", (UINTPTR)ptr);
+	//printf("DEST space virtual address: %lx\r\n", (UINTPTR)ptr);
 	return ptr;
 }
 
@@ -320,6 +324,8 @@ void verifyMemoryContents(void* src, void* dest)
 
 UINTPTR RxBDphysicalAddress;
 UINTPTR TxBDphysicalAddress;
+UINTPTR RxBufferVirtualAddress;
+UINTPTR TxBufferVirtualAddress;
 
 UINTPTR getBDphysicalAddress()
 {
@@ -332,7 +338,8 @@ UINTPTR getBDphysicalAddress()
         close(fd);
     }
 
-	printf("BD space physical address: %lu\r\n", phys_addr);
+	//printf("BD space physical address: %lu\r\n", phys_addr);
+	//printf("BD space physical address: %lx\r\n", phys_addr);
 
 	return phys_addr;
 }
@@ -348,7 +355,8 @@ UINTPTR getSrcPhysicalAddress()
         close(fd);
     }
 
-	printf("SRC space physical address: %lu\r\n", phys_addr);
+	//printf("SRC space physical address: %lu\r\n", phys_addr);
+	//printf("SRC space physical address: %lx\r\n", phys_addr);
 
 	return phys_addr;
 }
@@ -366,7 +374,8 @@ UINTPTR getDestPhysicalAddress()
         close(fd);
     }
 
-	printf("DEST space physical address: %lu\r\n", phys_addr);
+	//printf("DEST space physical address: %lu\r\n", phys_addr);
+	//printf("DEST space physical address: %lx\r\n", phys_addr);
 
 	return phys_addr;
 }
@@ -416,47 +425,33 @@ int main(void)
 		return XST_FAILURE;
 	}
 
-	//void* dmaRegisterSpace = mapDMAregisterSpace();
-
-	//printf("sizeof void*: %lu\r\n", sizeof(dmaRegisterSpace));
-
-	//printf("Address: %lu\r\n", *(uint64_t*)(dmaRegisterSpace));
-
-	//volatile uint64_t DMARCR = (UINTPTR)(dmaRegisterSpace);
-	//printf("%lu\r\n", DMARCR);
-
-	//printf("Map success\r\n");
-	//releaseDMAregisterSpace(dmaRegisterSpace);
-	//return 0;
-
-
+	void* dmaRegisterSpace = mapDMAregisterSpace();
 	void* BDmemorySpace = mapBDmemorySpace();
 	void* srcMemorySpace = mapSrcMemorySpace();
 	void* destMemorySpace = mapDestMemorySpace();
+
+	TxBufferVirtualAddress = (UINTPTR)srcMemorySpace;
+	RxBufferVirtualAddress = (UINTPTR)destMemorySpace;
 
 	printf("All Memory Spaces Mapped.\r\n");
 
 	fillMemoryWithRandomData(srcMemorySpace);
 	fillMemoryWithRandomData(destMemorySpace);
 
-	verifyMemoryContents(srcMemorySpace, destMemorySpace);
+	//verifyMemoryContents(srcMemorySpace, destMemorySpace);
 
 	RxBDphysicalAddress = getBDphysicalAddress();
 	TxBDphysicalAddress = RxBDphysicalAddress + 0x1000;
-	printf("%lu\r\n", TxBDphysicalAddress);
+	//printf("%lu\r\n", TxBDphysicalAddress);
 	getSrcPhysicalAddress();
 	RxBufferBaseAddress = getDestPhysicalAddress();
 
-	releaseBDmemorySpace(BDmemorySpace);
-	releaseSrcMemorySpace(srcMemorySpace);
-	releaseDestMemorySpace(destMemorySpace);
+	Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
 
-	printf("All Memory Spaces Unmapped. Exiting...\r\n");
-	return 0;
+	printf("BaseAddress: %lx\r\n", dmaRegisterSpace);
+	printf("BaseAddress: %lx\r\n", Config->BaseAddr);
 
-
-
-	//Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
+	printf("Init DMA Engine\r\n");
 
 	/* Initialize DMA engine */
 	Status = XAxiDma_CfgInitialize(&AxiDma, Config);
@@ -471,15 +466,21 @@ int main(void)
 		return XST_FAILURE;
 	}
 
+	printf("Init TX\r\n");
+
 	Status = TxSetup(&AxiDma);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
 
+	printf("Init RX\r\n");
+
 	Status = RxSetup(&AxiDma);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
+
+	printf("Transmit Packet\r\n");
 
 	/* Send a packet */
 	Status = SendPacket(&AxiDma);
@@ -498,7 +499,13 @@ int main(void)
 	printf("Successfully ran AXI DMA SG Polling Example\r\n");
 	printf("--- Exiting main() --- \r\n");
 
-	//releaseDMAregisterSpace(dmaRegisterSpace);
+	releaseBDmemorySpace(BDmemorySpace);
+	releaseSrcMemorySpace(srcMemorySpace);
+	releaseDestMemorySpace(destMemorySpace);
+	releaseDMAregisterSpace(dmaRegisterSpace);
+
+	printf("All Memory Spaces Unmapped. Exiting...\r\n");
+	//return 0;
 
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
@@ -576,7 +583,8 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 	BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT, 0x1000); // We hardcode the number of BD in RX
 
 	Status = XAxiDma_BdRingCreate(RxRingPtr, RxBDphysicalAddress,
-				RxBDphysicalAddress,
+				RxBufferVirtualAddress,
+				//RxBDphysicalAddress,
 				XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
 
 	if (Status != XST_SUCCESS) {
@@ -642,7 +650,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 
 	/* Clear the receive buffer, so we can verify data
 	 */
-	memset((void *)RxBufferBaseAddress, 0, MAX_PKT_LEN);
+	memset((void *)RxBufferVirtualAddress, 0, MAX_PKT_LEN);
 
 	Status = XAxiDma_BdRingToHw(RxRingPtr, FreeBdCount,
 						BdPtr);
@@ -699,14 +707,21 @@ static int TxSetup(XAxiDma * AxiDmaInstPtr)
 	//			TX_BD_SPACE_HIGH - TX_BD_SPACE_BASE + 1);
 	BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT, 0x1000); // We hardcode the number of BD in TX
 
+	//printf("Number of TX BD: %lu\r\n", BdCount);
+	//printf("Create TX BD ring\r\n");
+
 	Status = XAxiDma_BdRingCreate(TxRingPtr, TxBDphysicalAddress,
-				TxBDphysicalAddress,
+				TxBufferVirtualAddress,
+				//TxBDphysicalAddress,
 				XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
 	if (Status != XST_SUCCESS) {
 		printf("failed create BD ring in txsetup\r\n");
+		printf("Status: %i\r\n", Status);
 
 		return XST_FAILURE;
 	}
+
+	//printf("Clear TX BD ring entries\r\n");
 
 	/*
 	 * We create an all-zero BD as the template.

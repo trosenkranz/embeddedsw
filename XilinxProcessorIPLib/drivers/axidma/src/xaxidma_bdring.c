@@ -389,6 +389,12 @@ u32 XAxiDma_BdRingCreate(XAxiDma_BdRing *RingPtr, UINTPTR PhysAddr,
 	/* Make sure PhysAddr and VirtAddr are on same Alignment */
 	if ((PhysAddr % Alignment) || (VirtAddr % Alignment)) {
 
+		printf("Error in Alignment\r\n");
+		printf("%lx\r\n", (UINTPTR)VirtAddr);
+		printf("%lx\r\n", (unsigned int)VirtAddr);
+		printf("%lu\r\n", (UINTPTR)VirtAddr);
+		printf("%lu\r\n", (unsigned int)VirtAddr);
+
 		xdbg_printf(XDBG_DEBUG_ERROR, "BdRingCreate: Physical address"
 		" %x and virtual address %x have different alignment\r\n",
 			(unsigned int)PhysAddr, (unsigned int)VirtAddr);
@@ -440,6 +446,7 @@ u32 XAxiDma_BdRingCreate(XAxiDma_BdRing *RingPtr, UINTPTR PhysAddr,
 		BdVirtAddr += RingPtr->Separation;
 		BdPhysAddr += RingPtr->Separation;
 	}
+
 
 	/* At the end of the ring, link the last BD back to the top */
 	XAxiDma_BdWrite(BdVirtAddr, XAXIDMA_BD_NDESC_OFFSET,
