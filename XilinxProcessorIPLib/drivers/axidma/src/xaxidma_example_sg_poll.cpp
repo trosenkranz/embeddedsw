@@ -120,7 +120,7 @@
 #define RX_BUFFER_HIGH		(MEM_BASE_ADDR + 0x004FFFFF)
 
 
-#define MAX_PKT_LEN		4096
+#define MAX_PKT_LEN		0x20
 #define MARK_UNCACHEABLE        0x701
 
 #define TEST_START_VALUE	0xC
@@ -167,8 +167,6 @@ void* mapDMAregisterSpace() {
 		printf("Open failed.\r\n");
 		exit(1);
 	}
-
-	//printf("%i\r\n", dmaFileDescriptor);
 
 	//printf("Map device memory\n");
 	ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, dmaFileDescriptor, 0);
@@ -448,8 +446,8 @@ int main(void)
 
 	Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
 
-	printf("BaseAddress: %lx\r\n", dmaRegisterSpace);
-	printf("BaseAddress: %lx\r\n", Config->BaseAddr);
+	//printf("BaseAddress: %lx\r\n", dmaRegisterSpace);
+	//printf("BaseAddress: %lx\r\n", Config->BaseAddr);
 
 	printf("Init DMA Engine\r\n");
 
@@ -617,7 +615,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 	}
 
 	BdCurPtr = BdPtr;
-	RxBufferPtr = RxBufferBaseAddress;
+	RxBufferPtr = RxBufferVirtualAddress;
 	for (Index = 0; Index < FreeBdCount; Index++) {
 		Status = XAxiDma_BdSetBufAddr(BdCurPtr, RxBufferPtr);
 
@@ -861,7 +859,7 @@ static int CheckData(void)
 	u8 Value;
 
 
-	RxPacket = (u8 *) RxBufferBaseAddress;
+	RxPacket = (u8 *) RxBufferVirtualAddress;
 	Value = TEST_START_VALUE;
 
 	/* Invalidate the DestBuffer before receiving the data, in case the
