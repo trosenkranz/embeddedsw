@@ -342,6 +342,8 @@ UINTPTR getBDphysicalAddress()
 	return phys_addr;
 }
 
+UINTPTR TxBufferBaseAddress;
+
 UINTPTR getSrcPhysicalAddress()
 {
 	int fd;
@@ -445,7 +447,7 @@ int main(void)
 	RxBDphysicalAddress = getBDphysicalAddress();
 	TxBDphysicalAddress = RxBDphysicalAddress + 0x1000;
 	//printf("%lu\r\n", TxBDphysicalAddress);
-	getSrcPhysicalAddress();
+	TxBufferBaseAddress = getSrcPhysicalAddress();
 	RxBufferBaseAddress = getDestPhysicalAddress();
 
 	Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
@@ -796,7 +798,7 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 	}
 
 	/* Set up the BD using the information of the packet to transmit */
-	Status = XAxiDma_BdSetBufAddr(BdPtr, (UINTPTR) Packet);
+	Status = XAxiDma_BdSetBufAddr(BdPtr, (UINTPTR) TxBufferBaseAddress);
 	if (Status != XST_SUCCESS) {
 		printf("Tx set buffer addr %lx on BD %lx failed %d\r\n",
 		    (UINTPTR)Packet, (UINTPTR)BdPtr, Status);
@@ -829,7 +831,7 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 	XAxiDma_BdSetCtrl(BdPtr, XAXIDMA_BD_CTRL_TXEOF_MASK |
 						XAXIDMA_BD_CTRL_TXSOF_MASK);
 
-	XAxiDma_BdSetId(BdPtr, (UINTPTR)Packet);
+	XAxiDma_BdSetId(BdPtr, (UINTPTR)TxBufferBaseAddress); // As Id we use the physical address of the packet to send
 
 	/* Give the BD to DMA to kick off the transmission. */
 	Status = XAxiDma_BdRingToHw(TxRingPtr, 1, BdPtr);
