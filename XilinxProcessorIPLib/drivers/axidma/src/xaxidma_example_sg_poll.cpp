@@ -120,7 +120,7 @@
 #define RX_BUFFER_HIGH		(MEM_BASE_ADDR + 0x004FFFFF)
 
 
-#define MAX_PKT_LEN		0x20
+#define MAX_PKT_LEN		0x100
 #define MARK_UNCACHEABLE        0x701
 
 #define TEST_START_VALUE	0xC
@@ -378,7 +378,8 @@ UINTPTR getDestPhysicalAddress()
 	return phys_addr;
 }
 
-
+void* TxBDmemorySpace;
+void* RxBDmemorySpace;
 /*****************************************************************************/
 /**
 *
@@ -424,7 +425,8 @@ int main(void)
 	}
 
 	void* dmaRegisterSpace = mapDMAregisterSpace();
-	void* BDmemorySpace = mapBDmemorySpace();
+	TxBDmemorySpace = mapBDmemorySpace();
+	RxBDmemorySpace = TxBDmemorySpace + 0x1000;
 	void* srcMemorySpace = mapSrcMemorySpace();
 	void* destMemorySpace = mapDestMemorySpace();
 
@@ -497,7 +499,7 @@ int main(void)
 	printf("Successfully ran AXI DMA SG Polling Example\r\n");
 	printf("--- Exiting main() --- \r\n");
 
-	releaseBDmemorySpace(BDmemorySpace);
+	releaseBDmemorySpace(TxBDmemorySpace);
 	releaseSrcMemorySpace(srcMemorySpace);
 	releaseDestMemorySpace(destMemorySpace);
 	releaseDMAregisterSpace(dmaRegisterSpace);
@@ -581,7 +583,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 	BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT, 0x1000); // We hardcode the number of BD in RX
 
 	Status = XAxiDma_BdRingCreate(RxRingPtr, RxBDphysicalAddress,
-				RxBufferVirtualAddress,
+				(UINTPTR)RxBDmemorySpace,
 				//RxBDphysicalAddress,
 				XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
 
@@ -615,7 +617,7 @@ static int RxSetup(XAxiDma * AxiDmaInstPtr)
 	}
 
 	BdCurPtr = BdPtr;
-	RxBufferPtr = RxBufferVirtualAddress;
+	RxBufferPtr = RxBufferBaseAddress;
 	for (Index = 0; Index < FreeBdCount; Index++) {
 		Status = XAxiDma_BdSetBufAddr(BdCurPtr, RxBufferPtr);
 
@@ -709,7 +711,7 @@ static int TxSetup(XAxiDma * AxiDmaInstPtr)
 	//printf("Create TX BD ring\r\n");
 
 	Status = XAxiDma_BdRingCreate(TxRingPtr, TxBDphysicalAddress,
-				TxBufferVirtualAddress,
+				(UINTPTR)TxBDmemorySpace,
 				//TxBDphysicalAddress,
 				XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
 	if (Status != XST_SUCCESS) {
