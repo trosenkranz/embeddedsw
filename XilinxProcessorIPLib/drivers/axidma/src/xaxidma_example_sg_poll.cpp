@@ -337,7 +337,7 @@ UINTPTR getBDphysicalAddress()
     }
 
 	//printf("BD space physical address: %lu\r\n", phys_addr);
-	//printf("BD space physical address: %lx\r\n", phys_addr);
+	printf("BD space physical address: %lx\r\n", phys_addr);
 
 	return phys_addr;
 }
@@ -380,6 +380,8 @@ UINTPTR getDestPhysicalAddress()
 
 void* TxBDmemorySpace;
 void* RxBDmemorySpace;
+void* srcMemorySpace;
+void* destMemorySpace;
 /*****************************************************************************/
 /**
 *
@@ -427,16 +429,16 @@ int main(void)
 	void* dmaRegisterSpace = mapDMAregisterSpace();
 	TxBDmemorySpace = mapBDmemorySpace();
 	RxBDmemorySpace = TxBDmemorySpace + 0x1000;
-	void* srcMemorySpace = mapSrcMemorySpace();
-	void* destMemorySpace = mapDestMemorySpace();
+	srcMemorySpace = mapSrcMemorySpace();
+	destMemorySpace = mapDestMemorySpace();
 
 	TxBufferVirtualAddress = (UINTPTR)srcMemorySpace;
 	RxBufferVirtualAddress = (UINTPTR)destMemorySpace;
 
 	printf("All Memory Spaces Mapped.\r\n");
 
-	fillMemoryWithRandomData(srcMemorySpace);
-	fillMemoryWithRandomData(destMemorySpace);
+	//fillMemoryWithRandomData(srcMemorySpace);
+	//fillMemoryWithRandomData(destMemorySpace);
 
 	//verifyMemoryContents(srcMemorySpace, destMemorySpace);
 
@@ -771,7 +773,7 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 	TxRingPtr = XAxiDma_GetTxRing(AxiDmaInstPtr);
 
 	/* Create pattern in the packet to transmit */
-	TxPacket = (u8 *) Packet;
+	TxPacket = (u8 *) srcMemorySpace;
 
 	Value = TEST_START_VALUE;
 
