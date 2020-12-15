@@ -230,7 +230,8 @@ typedef struct {
 *		This function is used only when system is configured as SG mode
 *
 *****************************************************************************/
-#define XAxiDma_BdRingSnapShotCurrBd(RingPtr)		  \
+//#define XAxiDma_BdRingSnapShotCurrBd(RingPtr)
+inline void XAxiDma_BdRingSnapShotCurrBd(XAxiDma_BdRing* RingPtr)		  \
 	{								  \
 		if (!RingPtr->IsRxChannel) {				  \
 			(RingPtr)->BdaRestart = 			  \

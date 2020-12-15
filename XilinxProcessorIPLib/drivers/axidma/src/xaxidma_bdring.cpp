@@ -425,9 +425,12 @@ u32 XAxiDma_BdRingCreate(XAxiDma_BdRing *RingPtr, UINTPTR PhysAddr,
 	 */
 	memset((void *) VirtAddr, 0, (RingPtr->Separation * BdCount));
 
+	printf("Alloc RingBuf\r\n");
 	BdVirtAddr = VirtAddr;
 	BdPhysAddr = PhysAddr + RingPtr->Separation;
 	for (i = 1; i < BdCount; i++) {
+		printf("PhysicalAddress: %lx	VirtualAddress: %lx\r\n", BdPhysAddr, BdVirtAddr);
+
 		XAxiDma_BdWrite(BdVirtAddr, XAXIDMA_BD_NDESC_OFFSET,
 				(BdPhysAddr & XAXIDMA_DESC_LSB_MASK));
 		XAxiDma_BdWrite(BdVirtAddr, XAXIDMA_BD_NDESC_MSB_OFFSET,
@@ -446,7 +449,7 @@ u32 XAxiDma_BdRingCreate(XAxiDma_BdRing *RingPtr, UINTPTR PhysAddr,
 		BdVirtAddr += RingPtr->Separation;
 		BdPhysAddr += RingPtr->Separation;
 	}
-
+	printf("PhysicalAddress: %lx	VirtualAddress: %lx\r\n", BdPhysAddr, BdVirtAddr);
 
 	/* At the end of the ring, link the last BD back to the top */
 	XAxiDma_BdWrite(BdVirtAddr, XAXIDMA_BD_NDESC_OFFSET,

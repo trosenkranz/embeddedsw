@@ -158,7 +158,7 @@ int dmaFileDescriptor;
 void* mapDMAregisterSpace() {
 	const char *dev_name = "/dev/uio0";
 	void* ptr;
-	size_t map_size = 64 * 1024;
+	size_t map_size = 8 * 1024 * 1024;
 
 
     printf("Open device <%s>\n", dev_name);
@@ -183,7 +183,7 @@ void* mapDMAregisterSpace() {
 }
 
 void releaseDMAregisterSpace(void* ptr) {
-	if (munmap(ptr, 64 * 1024) != 0) 
+	if (munmap(ptr, 8 * 1024 * 1024) != 0) 
 		printf("Unmap failed?!?");
 
 	close(dmaFileDescriptor);
@@ -382,6 +382,7 @@ UINTPTR getDestPhysicalAddress()
 
 void* TxBDmemorySpace;
 void* RxBDmemorySpace;
+void* dmaRegisterSpace;
 void* srcMemorySpace;
 void* destMemorySpace;
 /*****************************************************************************/
@@ -408,6 +409,8 @@ int main(void)
 	int Status;
 	XAxiDma_Config *Config;
 
+	Status = XST_SUCCESS;
+
 #if defined(XPAR_UARTNS550_0_BASEADDR)
 
 	Uart550_Setup();
@@ -428,7 +431,9 @@ int main(void)
 		return XST_FAILURE;
 	}
 
-	void* dmaRegisterSpace = mapDMAregisterSpace();
+	printf("%i\r\n", sizeof(UINTPTR));
+
+	dmaRegisterSpace = mapDMAregisterSpace();
 	TxBDmemorySpace = mapBDmemorySpace();
 	RxBDmemorySpace = TxBDmemorySpace + 0x1000;
 	srcMemorySpace = mapSrcMemorySpace();
@@ -438,19 +443,42 @@ int main(void)
 	RxBufferVirtualAddress = (UINTPTR)destMemorySpace;
 
 	printf("All Memory Spaces Mapped.\r\n");
+	printf("\r\n\r\nPCI-ConfigurationRegister-Space:\r\n");
+	for(int i = 0; i < 0x20; i += 4) {
+		volatile uint32_t value = *((uint32_t*)(dmaRegisterSpace + i));
+		printf("%x: %x\r\n", i, value);
+	}
+
+	printf("\r\n\r\nAXI-Regs:\r\n");
+	for(int i = 0; i < 0x40; i += 4) {
+		volatile uint32_t value = *((uint32_t*)(dmaRegisterSpace + 0x200 + i));
+		printf("%x: %x\r\n", i, value);
+	}
+
+	printf("\r\n\r\nDMA-Regs:\r\n");
+	for(int i = 0; i < 0x44; i += 4) {
+		volatile uint32_t value = *((uint32_t*)(dmaRegisterSpace + 0x40000 + i));
+		printf("%x: %x\r\n", i, value);
+	}
+
+	// Set AXI2PCIBAR_0 to 0x3f80_0000
+	//uint32_t axiOffset = 0x3f800000;
+	//*((uint32_t*)(dmaRegisterSpace + 0x20C)) = axiOffset;
+	*((uint32_t*)(dmaRegisterSpace + 0x20C)) = 0x0;
 
 	//fillMemoryWithRandomData(srcMemorySpace);
 	//fillMemoryWithRandomData(destMemorySpace);
 
 	//verifyMemoryContents(srcMemorySpace, destMemorySpace);
 
+	//RxBDphysicalAddress = getBDphysicalAddress() - axiOffset;
 	RxBDphysicalAddress = getBDphysicalAddress();
 	TxBDphysicalAddress = RxBDphysicalAddress + 0x1000;
 	//printf("%lu\r\n", TxBDphysicalAddress);
 	TxBufferBaseAddress = getSrcPhysicalAddress();
 	RxBufferBaseAddress = getDestPhysicalAddress();
 
-	Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace));
+	Config->BaseAddr = ((UINTPTR)(dmaRegisterSpace + 0x40000));
 
 	//printf("BaseAddress: %lx\r\n", dmaRegisterSpace);
 	//printf("BaseAddress: %lx\r\n", Config->BaseAddr);
@@ -797,6 +825,7 @@ static int SendPacket(XAxiDma * AxiDmaInstPtr)
 		return XST_FAILURE;
 	}
 
+	printf("TX Buffer Base Address: %lx\r\n", (UINTPTR)TxBufferBaseAddress);
 	/* Set up the BD using the information of the packet to transmit */
 	Status = XAxiDma_BdSetBufAddr(BdPtr, (UINTPTR) TxBufferBaseAddress);
 	if (Status != XST_SUCCESS) {
@@ -910,13 +939,22 @@ static int CheckDmaResult(XAxiDma * AxiDmaInstPtr)
 	int FreeBdCount;
 	int Status;
 
+
 	TxRingPtr = XAxiDma_GetTxRing(AxiDmaInstPtr);
 	RxRingPtr = XAxiDma_GetRxRing(AxiDmaInstPtr);
+
+	printf("RegisterSet: \r\n");
+	for(int i = 0; i <= 0x44; i +=4) {
+	volatile uint32_t statusReg = *(uint32_t*)(dmaRegisterSpace + 0x40000 + i);
+	printf("%x: %lx\r\n",i , statusReg);
+	}
 
 	/* Wait until the one BD TX transaction is done */
 	while ((ProcessedBdCount = XAxiDma_BdRingFromHw(TxRingPtr,
 						       XAXIDMA_ALL_BDS,
 						       &BdPtr)) == 0) {
+
+	usleep(2000);
 	}
 
 	/* Free all processed TX BDs for future transmission */

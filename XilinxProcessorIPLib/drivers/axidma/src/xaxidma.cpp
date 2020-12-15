@@ -266,7 +266,7 @@ int XAxiDma_CfgInitialize(XAxiDma * InstancePtr, XAxiDma_Config *Config)
 	}
 
 	if (!TimeOut) {
-		xdbg_printf(XDBG_DEBUG_ERROR, "Failed reset in"
+		xdbg_printf(XDBG_DEBUG_ERROR, "Failed reset in "
 							"initialize\r\n");
 
 		/* Need system hard reset to recover
