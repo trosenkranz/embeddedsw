@@ -120,7 +120,7 @@
 #define RX_BUFFER_HIGH		(MEM_BASE_ADDR + 0x004FFFFF)
 
 
-#define MAX_PKT_LEN		0x100
+#define MAX_PKT_LEN		4096*2*2-4
 #define MARK_UNCACHEABLE        0x701
 
 #define TEST_START_VALUE	0xC
@@ -337,7 +337,7 @@ UINTPTR getBDphysicalAddress()
     }
 
 	//printf("BD space physical address: %lu\r\n", phys_addr);
-	printf("BD space physical address: %lx\r\n", phys_addr);
+	//printf("BD space physical address: %lx\r\n", phys_addr);
 
 	return phys_addr;
 }
@@ -385,6 +385,15 @@ void* RxBDmemorySpace;
 void* dmaRegisterSpace;
 void* srcMemorySpace;
 void* destMemorySpace;
+
+void printDMAregister()
+{
+	printf("DMA Register: \r\n");
+	for(int i = 0; i <= 0x44; i +=4) {
+		volatile uint32_t statusReg = *(uint32_t*)(dmaRegisterSpace + 0x40000 + i);
+		printf("%x: %lx\r\n",i , statusReg);
+	}
+}
 /*****************************************************************************/
 /**
 *
@@ -443,6 +452,7 @@ int main(void)
 	RxBufferVirtualAddress = (UINTPTR)destMemorySpace;
 
 	printf("All Memory Spaces Mapped.\r\n");
+	/*
 	printf("\r\n\r\nPCI-ConfigurationRegister-Space:\r\n");
 	for(int i = 0; i < 0x20; i += 4) {
 		volatile uint32_t value = *((uint32_t*)(dmaRegisterSpace + i));
@@ -454,12 +464,9 @@ int main(void)
 		volatile uint32_t value = *((uint32_t*)(dmaRegisterSpace + 0x200 + i));
 		printf("%x: %x\r\n", i, value);
 	}
+	*/
 
-	printf("\r\n\r\nDMA-Regs:\r\n");
-	for(int i = 0; i < 0x44; i += 4) {
-		volatile uint32_t value = *((uint32_t*)(dmaRegisterSpace + 0x40000 + i));
-		printf("%x: %x\r\n", i, value);
-	}
+	//printDMAregister();
 
 	// Set AXI2PCIBAR_0 to 0x3f80_0000
 	//uint32_t axiOffset = 0x3f800000;
@@ -472,8 +479,8 @@ int main(void)
 	//verifyMemoryContents(srcMemorySpace, destMemorySpace);
 
 	//RxBDphysicalAddress = getBDphysicalAddress() - axiOffset;
-	RxBDphysicalAddress = getBDphysicalAddress();
-	TxBDphysicalAddress = RxBDphysicalAddress + 0x1000;
+	TxBDphysicalAddress = getBDphysicalAddress();
+	RxBDphysicalAddress = TxBDphysicalAddress + 0x1000;
 	//printf("%lu\r\n", TxBDphysicalAddress);
 	TxBufferBaseAddress = getSrcPhysicalAddress();
 	RxBufferBaseAddress = getDestPhysicalAddress();
@@ -739,9 +746,6 @@ static int TxSetup(XAxiDma * AxiDmaInstPtr)
 	//			TX_BD_SPACE_HIGH - TX_BD_SPACE_BASE + 1);
 	BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT, 0x1000); // We hardcode the number of BD in TX
 
-	//printf("Number of TX BD: %lu\r\n", BdCount);
-	//printf("Create TX BD ring\r\n");
-
 	Status = XAxiDma_BdRingCreate(TxRingPtr, TxBDphysicalAddress,
 				(UINTPTR)TxBDmemorySpace,
 				//TxBDphysicalAddress,
@@ -752,8 +756,6 @@ static int TxSetup(XAxiDma * AxiDmaInstPtr)
 
 		return XST_FAILURE;
 	}
-
-	//printf("Clear TX BD ring entries\r\n");
 
 	/*
 	 * We create an all-zero BD as the template.
@@ -943,11 +945,7 @@ static int CheckDmaResult(XAxiDma * AxiDmaInstPtr)
 	TxRingPtr = XAxiDma_GetTxRing(AxiDmaInstPtr);
 	RxRingPtr = XAxiDma_GetRxRing(AxiDmaInstPtr);
 
-	printf("RegisterSet: \r\n");
-	for(int i = 0; i <= 0x44; i +=4) {
-	volatile uint32_t statusReg = *(uint32_t*)(dmaRegisterSpace + 0x40000 + i);
-	printf("%x: %lx\r\n",i , statusReg);
-	}
+	//printDMAregister();
 
 	/* Wait until the one BD TX transaction is done */
 	while ((ProcessedBdCount = XAxiDma_BdRingFromHw(TxRingPtr,
